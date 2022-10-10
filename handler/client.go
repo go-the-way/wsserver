@@ -31,10 +31,9 @@ func init() {
 }
 
 type (
-	msgProto struct {
+	sendProto struct {
 		Type     string         `json:"type"`
-		ClientID []string       `json:"client_ids,omitempty"`
-		ClientId string         `json:"client_id,omitempty"`
+		ClientID []string       `json:"client_id"`
 		Data     map[string]any `json:"data"`
 	}
 	pRO = m.WriteProto
@@ -45,21 +44,18 @@ func sendToClient(w http.ResponseWriter, r *http.Request) {
 	if readAll, err := ioutil.ReadAll(r.Body); err != nil {
 		writeError(w, err)
 	} else {
-		proto := msgProto{}
-		if err = json.Unmarshal(readAll, &proto); err != nil {
+		sp := sendProto{}
+		if err = json.Unmarshal(readAll, &sp); err != nil {
 			writeError(w, err)
 		} else {
 			writeJSON(w, map[string]any{})
-			go func(proto *msgProto) {
+			go func(proto *sendProto) {
 				set := types.MakeSet[string]()
-				if cid := proto.ClientId; cid != "" {
-					set.Add(cid)
-				}
 				if cid := proto.ClientID; cid != nil && len(cid) > 0 {
 					streams.ForEach(cid, func(_ int, id string) { set.Add(id) })
 				}
 				set.Iterate(func(clientID string) { m.SendToClient(&pRO{Type: proto.Type, ClientID: clientID, Data: proto.Data}) })
-			}(&proto)
+			}(&sp)
 		}
 	}
 }
