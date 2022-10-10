@@ -22,7 +22,7 @@ curl $SERVER_ADDR/api/online_client
 
 * Creator `when a new client connected, trigger creator listener` 
  
-* Destroy `when client closed, trigger destroy listener`
+* Destroyer `when cached client closed, trigger destroyer listener`
 
 ## Code Styles
 ```
@@ -32,7 +32,6 @@ listener               -- Listeners
 manager                -- Client manager
 pkg                    -- Third-party pkg
 ```
-
 
 # Example
 
