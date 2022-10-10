@@ -1,2 +1,5 @@
 # wsserver
-A gorouting-style WebSocket server based on `github.com/gorilla/websocket`, supports: Listener, Heart, Group...
+A goroutine-style WebSocket server based on `github.com/gorilla/websocket`, supports: Listener, Heart, Group...
+
+
+
