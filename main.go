@@ -12,7 +12,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/go-the-way/wsserver/config"
@@ -20,6 +20,7 @@ import (
 	"github.com/go-the-way/wsserver/manager"
 
 	_ "github.com/go-the-way/wsserver/handler"
+	_ "github.com/go-the-way/wsserver/rpc"
 )
 
 func init() {
@@ -34,8 +35,7 @@ func init() {
 
 func main() {
 	serverAddr := config.GetServerAddr()
-	server := &http.Server{Addr: serverAddr, Handler: config.GetServer()}
-	log.SetPrefix("[app] ")
-	log.Println("start http server listening ", serverAddr)
-	log.Fatalln(server.ListenAndServe())
+	s := &http.Server{Addr: serverAddr, Handler: config.GetServer()}
+	fmt.Println("http server started on", serverAddr)
+	fmt.Println(s.ListenAndServe())
 }
