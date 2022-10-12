@@ -1,6 +1,12 @@
 # wsserver
 A goroutine-style WebSocket server based on `github.com/gorilla/websocket`, supports: Listener, Heart, Group...
 
+[![CircleCI](https://circleci.com/gh/go-the-way/wsserver/tree/main.svg?style=shield)](https://circleci.com/gh/go-the-way/wsserver/tree/main)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/go-the-way/wsserver)
+[![codecov](https://codecov.io/gh/go-the-way/wsserver/branch/main/graph/badge.svg?token=8MAR3J959H)](https://codecov.io/gh/go-the-way/wsserver)
+[![Go Report Card](https://goreportcard.com/badge/github.com/go-the-way/wsserver)](https://goreportcard.com/report/github.com/go-the-way/wsserver)
+[![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/wsserver?status.svg)](https://pkg.go.dev/github.com/go-the-way/wsserver?tab=doc)
+
 # Install
 ```
 go install github.com/go-the-way/wsserver@latest
