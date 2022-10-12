@@ -95,32 +95,21 @@ func (c *client) Write(wp *WriteProto) { c.writeCh <- wp }
 // JoinGroup 客户端加入组
 func (c *client) JoinGroup(group string) (err error) {
 	if group == "" {
-		err = errors.New("client: group name must be not empty")
+		return errors.New("client: group name must be not empty")
 	}
-	if c.group == "" {
-		c.group = group
-		return
+	if c.group != "" {
+		return errors.New("client: one client must be have one group")
 	}
-	if c.group != group {
-		err = errors.New("client: one client must be have one group")
-	}
+	c.group = group
 	return nil
 }
 
 // LeaveGroup 客户端离开组
-func (c *client) LeaveGroup(group string) (err error) {
-	if group == "" {
-		err = errors.New("client: group name must be not empty")
+func (c *client) LeaveGroup() (err error) {
+	if c.group == "" {
+		return errors.New("client: group name must be not empty")
 	}
-	if c.group == group {
-		c.group = ""
-		return
-	}
-
-	if c.group != group {
-		err = errors.New("client: this client not in this group")
-	}
-
+	c.group = ""
 	return
 }
 
