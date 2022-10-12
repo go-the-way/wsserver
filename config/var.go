@@ -17,9 +17,11 @@ import (
 
 var (
 	serverAddr = bindEnv("SERVER_ADDR", ":80")
+	rpcAddr    = bindEnv("RPC_ADDR", ":86")
 )
 
 func GetServerAddr() string { return serverAddr }
+func GetRpcAddr() string    { return rpcAddr }
 
 func bindEnv(key, defVal string) string {
 	if n := os.Getenv(key); n != "" {
