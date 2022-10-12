@@ -12,52 +12,16 @@
 package handler
 
 import (
-	"encoding/json"
-
-	"io/ioutil"
 	"net/http"
 
 	"github.com/go-the-way/wsserver/config"
-	m "github.com/go-the-way/wsserver/manager"
 
-	"github.com/go-the-way/streams"
-	"github.com/go-the-way/streams/types"
+	m "github.com/go-the-way/wsserver/manager"
 )
 
 func init() {
 	server := config.GetServer()
-	server.HandleFunc("/api/send_to_client", sendToClient)
 	server.HandleFunc("/api/online_client", onlineClient)
-}
-
-type (
-	sendProto struct {
-		Type     string         `json:"type"`
-		ClientID []string       `json:"client_id"`
-		Data     map[string]any `json:"data"`
-	}
-	pRO = m.WriteProto
-)
-
-// send 发送消息
-func sendToClient(w http.ResponseWriter, r *http.Request) {
-	if readAll, err := ioutil.ReadAll(r.Body); err != nil {
-		writeError(w, err)
-	} else {
-		sp := sendProto{}
-		if err = json.Unmarshal(readAll, &sp); err != nil {
-			writeError(w, err)
-		} else {
-			writeJSON(w, map[string]any{})
-			go func(proto *sendProto) {
-				set := types.MakeSet[string]()
-				if cid := proto.ClientID; cid != nil && len(cid) > 0 {
-					streams.ForEach(cid, func(_ int, id string) { set.Add(id) })
-				}
-				set.Iterate(func(clientID string) { m.SendToClient(&pRO{Type: proto.Type, ClientID: clientID, Data: proto.Data}) })
-			}(&sp)
-		}
-	}
 }
 
 func onlineClient(w http.ResponseWriter, _ *http.Request) {

@@ -37,12 +37,13 @@ type (
 
 		writeCh chan *WriteProto // writeCh: the write read channel
 	}
-	ReadProto struct {
+	proto struct {
 		Type     string         `json:"type"`
 		ClientID string         `json:"client_id"`
-		Data     map[string]any `json:"data,omitempty"`
+		Data     map[string]any `json:"data"`
 	}
-	WriteProto ReadProto
+	ReadProto  proto
+	WriteProto proto
 )
 
 // newClientManager 新建客户端管理器
