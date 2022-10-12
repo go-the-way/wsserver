@@ -8,14 +8,19 @@ go install github.com/go-the-way/wsserver@latest
 
 ## API Docs
 
-* Send to client
-```
-curl $SERVER_ADDR/api/send_to_client -d '{"type":"echo","client_id":["client_a"],"data":{"seq":1000}}'
-```
-
-* Online client
+### 1. Online client
 ```
 curl $SERVER_ADDR/api/online_client
+```
+
+## Rpc Docs
+
+### 1. Send to client
+```
+ServicePath: Sender
+ServiceMethod: Send
+Args: {"type":"echo","client_id":["client_a"],"data":{"seq":1000}}
+Reply: {"code":200}
 ```
 
 ## Listener Docs
@@ -31,6 +36,21 @@ handler                -- Handler routers
 listener               -- Listeners
 manager                -- Client manager
 pkg                    -- Third-party pkg
+rpc                    -- Rpc service
+```
+
+## Environment
+
+### 1. SERVER_ADDR
+*Http Server Address*
+```
+default val: :80
+```
+
+### 2. RPC_ADDR
+*Rpc Server Address*
+```
+default val: :86
 ```
 
 # Example
