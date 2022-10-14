@@ -38,11 +38,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	if conn, err := ugr.Upgrade(w, r, nil); err != nil {
 		fmt.Println("websocket upgrade", err)
 	} else {
-		group := ""
-		if h := r.Header; h != nil {
-			group = h.Get("group")
-		}
-		manager.Connect(conn, group)
+		h := r.Header.Clone()
+		manager.Connect(conn, h.Get("group"))
 	}
 }
 

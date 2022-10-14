@@ -14,12 +14,14 @@ package manager
 import (
 	"errors"
 	"fmt"
+
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-the-way/wsserver/pkg/md5"
 	"github.com/go-the-way/wsserver/pkg/uuid"
+
+	"github.com/go-the-way/streams/ts"
 
 	ws "github.com/gorilla/websocket"
 )
@@ -31,7 +33,8 @@ type (
 		conn *ws.Conn    // conn: WS connection
 		id   string      // id: WS ClientID
 
-		group         string    // group: The group name
+		groups ts.Set[string] // groups: The group names
+
 		connectedTime time.Time // connectedTime: WS connection connected time
 
 		closed     bool      // closed: WS connection closed?
@@ -56,9 +59,10 @@ type (
 // newClient 新建客户端
 func newClient(conn *ws.Conn, group string, closeCh chan<- string, readCh chan<- *ReadProto) *client {
 	c := &client{
+		id:            uuid.RandID(),
 		mu:            &sync.Mutex{},
 		conn:          conn,
-		group:         group,
+		groups:        ts.NewSetValue[string](group),
 		connectedTime: time.Now(),
 		closeCh:       closeCh,
 		readCh:        readCh,
@@ -68,11 +72,6 @@ func newClient(conn *ws.Conn, group string, closeCh chan<- string, readCh chan<-
 		heartMu:       &sync.Mutex{},
 		stopHeartCh:   make(chan struct{}, 1),
 		ticker:        time.NewTicker(time.Second * 10),
-	}
-	if c.IsNode() {
-		c.id = md5.MD5(c.RemoteAddrIP())
-	} else {
-		c.id = uuid.RandID()
 	}
 	go c.read()
 	go c.write()
@@ -97,27 +96,36 @@ func (c *client) JoinGroup(group string) (err error) {
 	if group == "" {
 		return errors.New("client: group name must be not empty")
 	}
-	if c.group != "" {
-		return errors.New("client: one client must be have one group")
+
+	if c.groups.Contains(group) {
+		return errors.New("client: group was joined")
 	}
-	c.group = group
+
+	c.groups.Add(group)
+
 	return nil
 }
 
 // LeaveGroup 客户端离开组
-func (c *client) LeaveGroup() (err error) {
-	if c.group == "" {
+func (c *client) LeaveGroup(group string) (err error) {
+	if group == "" {
 		return errors.New("client: group name must be not empty")
 	}
-	c.group = ""
+
+	if !c.groups.Contains(group) {
+		return errors.New("client: group not joined")
+	}
+
+	c.groups.Delete(group)
+
 	return
 }
 
-// InGroup 客户端是否在组
-func (c *client) InGroup(group string) bool { return c.group == group }
+// LeaveGroups 客户端离开所有组
+func (c *client) LeaveGroups() { c.groups.Clear() }
 
-// IsNode 客户端是否是节点
-func (c *client) IsNode() bool { return c.InGroup("node") }
+// InGroup 客户端是否在组
+func (c *client) InGroup(group string) bool { return c.groups.Contains(group) }
 
 //read 客户端读
 func (c *client) read() {
