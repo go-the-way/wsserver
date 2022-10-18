@@ -15,6 +15,7 @@ func serve() {
 	s := server.NewServer()
 	rpcAddr := config.GetRpcAddr()
 	_ = s.Register(new(service.Sender), "")
+	_ = s.Register(new(service.GroupSender), "")
 	fmt.Println("rpc server started on", rpcAddr)
 	fmt.Println(s.Serve("tcp", rpcAddr))
 }

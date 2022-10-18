@@ -35,15 +35,26 @@ type (
 
 		readCh chan *ReadProto // readCh: the client read channel
 
-		writeCh chan *WriteProto // writeCh: the write read channel
+		writeCh chan *WriteProto // writeCh: the client write channel
+
+		gReadCh chan *GReadProto // gReadCh: the group read channel
+
+		gWriteCh chan *GWriteProto // gWriteCh: the group write channel
 	}
 	proto struct {
 		Type     string         `json:"type"`
 		ClientID string         `json:"client_id"`
 		Data     map[string]any `json:"data"`
 	}
-	ReadProto  proto
-	WriteProto proto
+	gProto struct {
+		Type  string         `json:"type"`
+		Group string         `json:"group"`
+		Data  map[string]any `json:"data"`
+	}
+	ReadProto   proto
+	WriteProto  proto
+	GReadProto  gProto
+	GWriteProto gProto
 )
 
 // newClientManager 新建客户端管理器
@@ -56,6 +67,8 @@ func newClientManager(createCh, destroyCh chan<- *C) *clientManager {
 		destroyCh: destroyCh,
 		readCh:    make(chan *ReadProto, 1000),
 		writeCh:   make(chan *WriteProto, 1000),
+		gReadCh:   make(chan *GReadProto, 1000),
+		gWriteCh:  make(chan *GWriteProto, 1000),
 	}
 }
 
@@ -65,6 +78,8 @@ func Init(createCh, destroyCh chan<- *C) {
 	go manager.startClose()
 	go manager.startRead()
 	go manager.startWrite()
+	go manager.startGRead()
+	go manager.startGWrite()
 }
 
 // Connect 客户端连接
@@ -86,8 +101,23 @@ func (cm *clientManager) startRead() {
 	}
 }
 
+func (cm *clientManager) startGRead() {
+	for {
+		select {
+		case data, ok := <-cm.gReadCh:
+			if !ok {
+				return
+			}
+			fmt.Println("read:", data)
+		}
+	}
+}
+
 // SendToClient 发送客户端消息
 func SendToClient(pro *WriteProto) { manager.writeCh <- pro }
+
+// SendToGroup 发送组消息
+func SendToGroup(gPro *GWriteProto) { manager.gWriteCh <- gPro }
 
 func (cm *clientManager) startWrite() {
 	for {
@@ -96,6 +126,21 @@ func (cm *clientManager) startWrite() {
 			if value, ok := manager.M.Load(pro.ClientID); ok {
 				go func(value any) { value.(*C).Write(pro) }(value)
 			}
+		}
+	}
+}
+
+func (cm *clientManager) startGWrite() {
+	for {
+		select {
+		case pro := <-cm.gWriteCh:
+			manager.M.Range(func(_, value any) bool {
+				cc := value.(*C)
+				if cc.groups.Contains(pro.Group) {
+					go func(value any) { cc.Write(&WriteProto{pro.Type, cc.ID(), pro.Data}) }(value)
+				}
+				return true
+			})
 		}
 	}
 }

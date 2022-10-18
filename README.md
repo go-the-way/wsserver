@@ -29,6 +29,14 @@ Args: {"type":"echo","client_id":["client_a"],"data":{"seq":1000}}
 Reply: {"code":200}
 ```
 
+### 2. Send to group
+```
+ServicePath: GroupSender
+ServiceMethod: Send
+Args: {"type":"echo","group":["x-node"],"data":{"seq":1000}}
+Reply: {"code":200}
+```
+
 ## Listener Docs
 
 * Creator `when a new client connected, trigger creator listener` 

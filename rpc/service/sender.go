@@ -10,19 +10,19 @@ import (
 )
 
 type (
-	Sender struct{}
-	Args   struct {
+	Sender     struct{}
+	SenderArgs struct {
 		Type     string         `json:"type"`
 		ClientID []string       `json:"client_id"`
 		Data     map[string]any `json:"data"`
 	}
-	Reply struct {
+	SenderReply struct {
 		Code int `json:"code"`
 	}
 	pRO = m.WriteProto
 )
 
-func (s *Sender) Send(_ context.Context, args Args, reply *Reply) error {
+func (s *Sender) Send(_ context.Context, args SenderArgs, reply *SenderReply) error {
 	set := ts.NewSet[string]()
 	if cid := args.ClientID; cid != nil && len(cid) > 0 {
 		streams.ForEach(cid, func(_ int, id string) { set.Add(id) })
