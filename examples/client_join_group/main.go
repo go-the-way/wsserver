@@ -34,7 +34,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	cc := client.NewXClient("", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	cc := client.NewXClient("Client", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 	defer func() { _ = cc.Close() }()
 	var reply Reply
 	err = cc.Call(context.Background(), "JoinGroup", args, &reply)
