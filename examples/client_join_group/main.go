@@ -8,29 +8,38 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package service
+package main
 
 import (
 	"context"
-	m "github.com/go-the-way/wsserver/manager"
+	"fmt"
+
+	"github.com/smallnest/rpcx/client"
 )
 
 type (
-	GroupSender     struct{}
-	GroupSenderArgs struct {
-		Type  string         `json:"type"`
-		Group string         `json:"group"`
-		Data  map[string]any `json:"data"`
+	Args struct {
+		ClientID string `json:"client_id"`
+		Group    string `json:"group"`
 	}
-	GroupSenderReply struct {
+	Reply struct {
 		Code int `json:"code"`
 	}
-	gPRO = m.GWriteProto
 )
 
-func (s *GroupSender) Send(_ context.Context, args GroupSenderArgs, reply *GroupSenderReply) error {
-	m.SendToGroup(&gPRO{Type: args.Type, Group: args.Group, Data: args.Data})
-	reply.Code = 200
-	return nil
+func main() {
+	args := Args{ClientID: "7ed8658c34384722a518e151cb6ccb85", Group: "X-Node"}
+	d, err := client.NewPeer2PeerDiscovery("tcp@:86", "")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	cc := client.NewXClient("", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	defer func() { _ = cc.Close() }()
+	var reply Reply
+	err = cc.Call(context.Background(), "JoinGroup", args, &reply)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

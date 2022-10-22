@@ -8,39 +8,31 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package main
+
+package client
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/smallnest/rpcx/client"
+	"github.com/go-the-way/wsserver/manager"
 )
 
 type (
-	Args struct {
-		Type  string         `json:"type"`
-		Group string         `json:"group"`
-		Data  map[string]any `json:"data"`
+	Client        struct{}
+	JoinGroupArgs struct {
+		ClientID string `json:"client_id"`
+		Group    string `json:"group"`
 	}
 	Reply struct {
-		Code int `json:"code"`
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
 	}
 )
 
-func main() {
-	args := Args{Type: "echo", Group: "X-Node", Data: map[string]any{"seq": 10000}}
-	d, err := client.NewPeer2PeerDiscovery("tcp@:86", "")
-	if err != nil {
-		fmt.Println(err)
-		return
+func (s *Client) JoinGroup(_ context.Context, args JoinGroupArgs, reply *Reply) error {
+	reply.Code = 200
+	if err := manager.JoinGroup(args.ClientID, args.Group); err != nil {
+		reply.Code = 500
+		reply.Msg = err.Error()
 	}
-	cc := client.NewXClient("Sender", client.Failtry, client.RandomSelect, d, client.DefaultOption)
-	defer func() { _ = cc.Close() }()
-	var reply Reply
-	err = cc.Call(context.Background(), "GSend", args, &reply)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	return nil
 }

@@ -31,9 +31,17 @@ Reply: {"code":200}
 
 ### 2. Send to group
 ```
-ServicePath: GroupSender
-ServiceMethod: Send
+ServicePath: Sender
+ServiceMethod: GSend
 Args: {"type":"echo","group":["x-node"],"data":{"seq":1000}}
+Reply: {"code":200}
+```
+
+### 3. Client join group
+```
+ServicePath: Client
+ServiceMethod: JoinGroup
+Args: {"client_id":"x-client","group":"x-node"}
 Reply: {"code":200}
 ```
 

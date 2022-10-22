@@ -200,3 +200,16 @@ func (cm *clientManager) startClose() {
 		}
 	}
 }
+
+func JoinGroup(clientID, group string) error {
+	return manager.joinGroup(clientID, group)
+}
+
+func (cm *clientManager) joinGroup(clientID, group string) error {
+	if value, ok := cm.M.Load(clientID); ok {
+		cc := value.(*C)
+		return cc.JoinGroup(group)
+	} else {
+		return errors.New("client: not exists")
+	}
+}
