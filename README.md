@@ -45,6 +45,14 @@ Args: {"client_id":"x-client","group":"x-node"}
 Reply: {"code":200}
 ```
 
+### 4. Client leave group
+```
+ServicePath: Client
+ServiceMethod: LeaveGroup
+Args: {"client_id":"x-client","group":"x-node"}
+Reply: {"code":200}
+```
+
 ## Listener Docs
 
 * Creator `when a new client connected, trigger creator listener` 

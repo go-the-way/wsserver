@@ -8,41 +8,38 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package client
+package main
 
 import (
 	"context"
-	"github.com/go-the-way/wsserver/manager"
+	"fmt"
+
+	"github.com/smallnest/rpcx/client"
 )
 
 type (
-	Client        struct{}
-	JoinGroupArgs struct {
+	Args struct {
 		ClientID string `json:"client_id"`
 		Group    string `json:"group"`
 	}
-	LeaveGroupArgs JoinGroupArgs
-	Reply          struct {
-		Code int    `json:"code"`
-		Msg  string `json:"msg"`
+	Reply struct {
+		Code int `json:"code"`
 	}
 )
 
-func (s *Client) JoinGroup(_ context.Context, args JoinGroupArgs, reply *Reply) error {
-	reply.Code = 200
-	if err := manager.JoinGroup(args.ClientID, args.Group); err != nil {
-		reply.Code = 500
-		reply.Msg = err.Error()
+func main() {
+	args := Args{ClientID: "7ed8658c34384722a518e151cb6ccb85", Group: "X-Node"}
+	d, err := client.NewPeer2PeerDiscovery("tcp@:86", "")
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-	return nil
-}
-
-func (s *Client) LeaveGroup(_ context.Context, args LeaveGroupArgs, reply *Reply) error {
-	reply.Code = 200
-	if err := manager.LeaveGroup(args.ClientID, args.Group); err != nil {
-		reply.Code = 500
-		reply.Msg = err.Error()
+	cc := client.NewXClient("Client", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	defer func() { _ = cc.Close() }()
+	var reply Reply
+	err = cc.Call(context.Background(), "LeaveGroup", args, &reply)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-	return nil
 }
