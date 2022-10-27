@@ -37,7 +37,7 @@ func main() {
 	cc := client.NewXClient("Client", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 	defer func() { _ = cc.Close() }()
 	var reply Reply
-	err = cc.Call(context.Background(), "LeaveAllGroup", args, &reply)
+	err = cc.Call(context.Background(), "LeaveGroup", args, &reply)
 	if err != nil {
 		fmt.Println(err)
 		return

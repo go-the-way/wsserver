@@ -226,3 +226,17 @@ func (cm *clientManager) leaveGroup(clientID, group string) error {
 		return errors.New("client: not exists")
 	}
 }
+
+func LeaveAllGroup(clientID string) error {
+	return manager.leaveAllGroup(clientID)
+}
+
+func (cm *clientManager) leaveAllGroup(clientID string) error {
+	if value, ok := cm.M.Load(clientID); ok {
+		cc := value.(*C)
+		cc.LeaveGroups()
+		return nil
+	} else {
+		return errors.New("client: not exists")
+	}
+}

@@ -22,8 +22,11 @@ type (
 		ClientID string `json:"client_id"`
 		Group    string `json:"group"`
 	}
-	LeaveGroupArgs JoinGroupArgs
-	Reply          struct {
+	LeaveGroupArgs    JoinGroupArgs
+	LeaveAllGroupArgs struct {
+		ClientID string `json:"client_id"`
+	}
+	Reply struct {
 		Code int    `json:"code"`
 		Msg  string `json:"msg"`
 	}
@@ -41,6 +44,15 @@ func (s *Client) JoinGroup(_ context.Context, args JoinGroupArgs, reply *Reply) 
 func (s *Client) LeaveGroup(_ context.Context, args LeaveGroupArgs, reply *Reply) error {
 	reply.Code = 200
 	if err := manager.LeaveGroup(args.ClientID, args.Group); err != nil {
+		reply.Code = 500
+		reply.Msg = err.Error()
+	}
+	return nil
+}
+
+func (s *Client) LeaveAllGroup(_ context.Context, args LeaveAllGroupArgs, reply *Reply) error {
+	reply.Code = 200
+	if err := manager.LeaveAllGroup(args.ClientID); err != nil {
 		reply.Code = 500
 		reply.Msg = err.Error()
 	}
