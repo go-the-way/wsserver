@@ -2,38 +2,35 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
-//	http://www.apache.org/licenses/LICENSE-2.0
-//
+//      http://www.apache.org/licenses/LICENSE-2.0
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package main
+
+package listener
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
-	"net/http"
+	c "github.com/go-the-way/wsserver/manager"
 )
 
-type readProto struct {
-	Type     string `json:"type"`
-	ClientID string `json:"client_id"`
+// joiner 加入组监听器
+type joiner struct{ ch chan *c.C }
+
+func NewJoiner(ch chan *c.C) Listener {
+	jr := &joiner{ch: ch}
+	go jr.startJoin()
+	return jr
 }
 
-func main() {
-	conn, _, err := websocket.DefaultDialer.Dial("ws://:80/ws", http.Header{"group": {"x-node"}})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer func() { _ = conn.Close() }()
-	rp := readProto{}
-	if err := conn.ReadJSON(&rp); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(rp.ClientID)
+func (jr *joiner) C() chan<- *c.C { return jr.ch }
+
+func (jr *joiner) startJoin() {
+	for {
+		if client := <-jr.ch; client != nil {
+			fmt.Println("joined", client.ID())
+		}
 	}
 }

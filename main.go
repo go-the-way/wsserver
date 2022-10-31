@@ -28,10 +28,12 @@ func init() {
 	var (
 		cCh = make(chan *manager.C, 10000)
 		dCh = make(chan *manager.C, 10000)
+		jCh = make(chan *manager.C, 10000)
 		_   = listener.NewCreator(cCh)
 		_   = listener.NewDestroyer(dCh)
+		_   = listener.NewJoiner(jCh)
 	)
-	manager.Init(cCh, dCh)
+	manager.Init(cCh, dCh, jCh)
 }
 
 func main() {

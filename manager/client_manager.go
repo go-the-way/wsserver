@@ -32,6 +32,7 @@ type (
 		closeCh chan string // closeCh: the client close channel
 
 		createCh, destroyCh chan<- *C // createCh, destroyCh: the client create and destroy channel
+		joinCh              chan<- *C // joinCh: the client join group channel
 
 		readCh chan *ReadProto // readCh: the client read channel
 
@@ -58,13 +59,14 @@ type (
 )
 
 // newClientManager 新建客户端管理器
-func newClientManager(createCh, destroyCh chan<- *C) *clientManager {
+func newClientManager(createCh, destroyCh, joinCh chan<- *C) *clientManager {
 	return &clientManager{
 		M:         &sync.Map{},
 		mu:        &sync.Mutex{},
 		closeCh:   make(chan string, 10000),
 		createCh:  createCh,
 		destroyCh: destroyCh,
+		joinCh:    joinCh,
 		readCh:    make(chan *ReadProto, 1000),
 		writeCh:   make(chan *WriteProto, 1000),
 		gReadCh:   make(chan *GReadProto, 1000),
@@ -73,8 +75,8 @@ func newClientManager(createCh, destroyCh chan<- *C) *clientManager {
 }
 
 // Init 初始化客户端管理器
-func Init(createCh, destroyCh chan<- *C) {
-	manager = newClientManager(createCh, destroyCh)
+func Init(createCh, destroyCh, joinCh chan<- *C) {
+	manager = newClientManager(createCh, destroyCh, joinCh)
 	go manager.startClose()
 	go manager.startRead()
 	go manager.startWrite()
@@ -162,6 +164,7 @@ func (cm *clientManager) Connect(conn *ws.Conn, group string) (*C, error) {
 	defer cm.mu.Unlock()
 
 	ct := newClient(conn, group, cm.closeCh, cm.readCh)
+
 	clientID := ct.ID()
 
 	if _, ok := cm.M.Load(ct); ok {
@@ -173,6 +176,10 @@ func (cm *clientManager) Connect(conn *ws.Conn, group string) (*C, error) {
 
 	// then attach to create
 	if ch := cm.createCh; ch != nil {
+		ch <- ct
+	}
+
+	if ch := cm.joinCh; ch != nil {
 		ch <- ct
 	}
 
@@ -208,7 +215,14 @@ func JoinGroup(clientID, group string) error {
 func (cm *clientManager) joinGroup(clientID, group string) error {
 	if value, ok := cm.M.Load(clientID); ok {
 		cc := value.(*C)
-		return cc.JoinGroup(group)
+		if err := cc.JoinGroup(group); err != nil {
+			return err
+		} else {
+			if ch := cm.joinCh; ch != nil {
+				ch <- cc
+			}
+			return nil
+		}
 	} else {
 		return errors.New("client: not exists")
 	}
