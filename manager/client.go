@@ -127,7 +127,7 @@ func (c *client) LeaveGroups() { c.groups.Clear() }
 // InGroup 客户端是否在组
 func (c *client) InGroup(group string) bool { return c.groups.Contains(group) }
 
-//read 客户端读
+// read 客户端读
 func (c *client) read() {
 	for {
 		select {

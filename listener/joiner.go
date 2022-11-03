@@ -30,7 +30,7 @@ func (jr *joiner) C() chan<- *c.C { return jr.ch }
 func (jr *joiner) startJoin() {
 	for {
 		if client := <-jr.ch; client != nil {
-			fmt.Println("joined", client.ID())
+			fmt.Println("joined:", client.ID())
 		}
 	}
 }
