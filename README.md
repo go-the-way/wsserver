@@ -61,6 +61,15 @@ Args: {"client_id":"x-client"}
 Reply: {"code":200}
 ```
 
+
+### 6.  Broadcast
+```
+ServicePath: Client
+ServiceMethod: Broadcast
+Args: {"type":"echo","data":{"seq":1000}}
+Reply: {"code":200}
+```
+
 ## Listener Docs
 
 * Creator `when a new client connected, trigger creator listener` 

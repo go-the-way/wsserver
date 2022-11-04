@@ -41,6 +41,10 @@ type (
 		gReadCh chan *GReadProto // gReadCh: the group read channel
 
 		gWriteCh chan *GWriteProto // gWriteCh: the group write channel
+
+		bcReadCh chan *BCReadProto // bcReadCh: the broadcast read channel
+
+		bcWriteCh chan *BCWriteProto // bcWriteCh: the broadcast write channel
 	}
 	proto struct {
 		Type     string         `json:"type"`
@@ -52,10 +56,16 @@ type (
 		Group string         `json:"group"`
 		Data  map[string]any `json:"data"`
 	}
-	ReadProto   proto
-	WriteProto  proto
-	GReadProto  gProto
-	GWriteProto gProto
+	bcProto struct {
+		Type string         `json:"type"`
+		Data map[string]any `json:"data"`
+	}
+	ReadProto    proto
+	WriteProto   proto
+	GReadProto   gProto
+	GWriteProto  gProto
+	BCReadProto  bcProto
+	BCWriteProto bcProto
 )
 
 // newClientManager 新建客户端管理器
@@ -71,6 +81,8 @@ func newClientManager(createCh, destroyCh, joinCh chan<- *C) *clientManager {
 		writeCh:   make(chan *WriteProto, 1000),
 		gReadCh:   make(chan *GReadProto, 1000),
 		gWriteCh:  make(chan *GWriteProto, 1000),
+		bcReadCh:  make(chan *BCReadProto, 1000),
+		bcWriteCh: make(chan *BCWriteProto, 1000),
 	}
 }
 
@@ -82,6 +94,8 @@ func Init(createCh, destroyCh, joinCh chan<- *C) {
 	go manager.startWrite()
 	go manager.startGRead()
 	go manager.startGWrite()
+	go manager.startBCRead()
+	go manager.startBCWrite()
 }
 
 // Connect 客户端连接
@@ -91,6 +105,15 @@ func Connect(conn *ws.Conn, group string) {
 	}
 }
 
+// SendToClient 发送客户端消息
+func SendToClient(pro *WriteProto) { manager.writeCh <- pro }
+
+// SendToGroup 发送组消息
+func SendToGroup(gPro *GWriteProto) { manager.gWriteCh <- gPro }
+
+// Broadcast 广播
+func Broadcast(bcPro *BCWriteProto) { manager.bcWriteCh <- bcPro }
+
 func (cm *clientManager) startRead() {
 	for {
 		select {
@@ -99,6 +122,17 @@ func (cm *clientManager) startRead() {
 				return
 			}
 			fmt.Println("read:", data)
+		}
+	}
+}
+
+func (cm *clientManager) startWrite() {
+	for {
+		select {
+		case pro := <-cm.writeCh:
+			if value, ok := manager.M.Load(pro.ClientID); ok {
+				go func(value any) { value.(*C).Write(pro) }(value)
+			}
 		}
 	}
 }
@@ -115,23 +149,6 @@ func (cm *clientManager) startGRead() {
 	}
 }
 
-// SendToClient 发送客户端消息
-func SendToClient(pro *WriteProto) { manager.writeCh <- pro }
-
-// SendToGroup 发送组消息
-func SendToGroup(gPro *GWriteProto) { manager.gWriteCh <- gPro }
-
-func (cm *clientManager) startWrite() {
-	for {
-		select {
-		case pro := <-cm.writeCh:
-			if value, ok := manager.M.Load(pro.ClientID); ok {
-				go func(value any) { value.(*C).Write(pro) }(value)
-			}
-		}
-	}
-}
-
 func (cm *clientManager) startGWrite() {
 	for {
 		select {
@@ -141,6 +158,31 @@ func (cm *clientManager) startGWrite() {
 				if cc.groups.Contains(pro.Group) {
 					go func(value any) { cc.Write(&WriteProto{pro.Type, cc.ID(), pro.Data}) }(value)
 				}
+				return true
+			})
+		}
+	}
+}
+
+func (cm *clientManager) startBCRead() {
+	for {
+		select {
+		case data, ok := <-cm.bcReadCh:
+			if !ok {
+				return
+			}
+			fmt.Println("read:", data)
+		}
+	}
+}
+
+func (cm *clientManager) startBCWrite() {
+	for {
+		select {
+		case pro := <-cm.bcWriteCh:
+			manager.M.Range(func(_, value any) bool {
+				cc := value.(*C)
+				go func(value any) { cc.Write(&WriteProto{pro.Type, cc.ID(), pro.Data}) }(value)
 				return true
 			})
 		}

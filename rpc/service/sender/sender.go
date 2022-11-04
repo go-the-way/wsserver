@@ -38,7 +38,13 @@ type (
 		Data  map[string]any `json:"data"`
 	}
 
-	gPRO = m.GWriteProto
+	BCArgs struct {
+		Type string         `json:"type"`
+		Data map[string]any `json:"data"`
+	}
+
+	gPRO  = m.GWriteProto
+	bcPRO = m.BCWriteProto
 )
 
 func (s *Sender) Send(_ context.Context, args Args, reply *Reply) error {
@@ -53,6 +59,12 @@ func (s *Sender) Send(_ context.Context, args Args, reply *Reply) error {
 
 func (s *Sender) GSend(_ context.Context, args GArgs, reply *Reply) error {
 	m.SendToGroup(&gPRO{Type: args.Type, Group: args.Group, Data: args.Data})
+	reply.Code = 200
+	return nil
+}
+
+func (s *Sender) Broadcast(_ context.Context, args BCArgs, reply *Reply) error {
+	m.Broadcast(&bcPRO{Type: args.Type, Data: args.Data})
 	reply.Code = 200
 	return nil
 }
