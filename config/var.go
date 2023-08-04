@@ -1,4 +1,4 @@
-// Copyright 2022 wsserver Author. All Rights Reserved.
+// Copyright 2023 wsserver Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -31,11 +31,11 @@ func bindEnv(key, defVal string) string {
 }
 
 //
-//func bindEnvInt(key string, defVal int) (i int) {
+// func bindEnvInt(key string, defVal int) (i int) {
 //	if n := bindEnv(key, ""); n == "" {
 //		i = defVal
 //	} else {
 //		i, _ = strconv.Atoi(n)
 //	}
 //	return
-//}
+// }
