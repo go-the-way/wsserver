@@ -9,13 +9,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package services
 
-import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
-)
-
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
-
-func main() { serve(); select {} }
+import _ "github.com/go-the-way/wsserver/server/rpcserver/services/sender"

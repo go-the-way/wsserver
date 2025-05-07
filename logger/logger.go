@@ -9,13 +9,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package logger
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"log"
+	"os"
+
+	"github.com/go-the-way/wsserver/envs"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
+var logger = log.New(os.Stdout, "[wsserver] ", log.LstdFlags|log.Lshortfile)
 
-func main() { serve(); select {} }
+func Debug(format string, v ...any) {
+	if envs.LogEnable {
+		logger.Printf(format, v...)
+	}
+}
+
+func Log(format string, v ...any) {
+	logger.Printf(format, v...)
+}

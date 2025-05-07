@@ -9,13 +9,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package sender
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"context"
+	"github.com/go-the-way/wsserver/server/rpcserver/svc"
+
+	"github.com/go-the-way/wsserver/manager"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
+type Service struct{}
 
-func main() { serve(); select {} }
+func NewService() *Service { return &Service{} }
+
+func (s *Service) Send(_ context.Context, req SendReq, resp *Resp) (err error) {
+	return svc.Do(req, resp, func(req SendReq) (err error) {
+		for _, clientId := range req.ClientId {
+			manager.Send(manager.SendTaskProtocol(req.Type, req.TaskId, req.TaskClientId, clientId, req.Data))
+		}
+		return
+	}, func(err error, a *Resp) { a.Transform(err) })
+}

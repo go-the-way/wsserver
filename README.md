@@ -1,124 +1,71 @@
 # wsserver
-A goroutine-style WebSocket server based on `github.com/gorilla/websocket`, supports: Listener, Heart, Group...
 
-[![CircleCI](https://circleci.com/gh/go-the-way/wsserver/tree/main.svg?style=shield)](https://circleci.com/gh/go-the-way/wsserver/tree/main)
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/go-the-way/wsserver)
-[![codecov](https://codecov.io/gh/go-the-way/wsserver/branch/main/graph/badge.svg?token=8MAR3J959H)](https://codecov.io/gh/go-the-way/wsserver)
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-the-way/wsserver)](https://goreportcard.com/report/github.com/go-the-way/wsserver)
-[![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/wsserver?status.svg)](https://pkg.go.dev/github.com/go-the-way/wsserver?tab=doc)
-
-# Install
+send to client
 ```
-go install github.com/go-the-way/wsserver@latest
+curl -i -X POST http://192.168.110.20:80/api/send -d '{"type":"echo","client_id":["24c0c0793df0fe8fb2bbddf2d8ad59cf","ec2338f5ae989a1573b337c540df6d6e"],"data":{"seq":100}}'
 ```
 
-## API Docs
+ws.html
+```html
+<!DOCTYPE html>
+<html lang="en">
 
-### 1. Online client
-```
-curl $SERVER_ADDR/api/online_client
-```
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
 
-## Rpc Docs
+<body>
+<button id="linkBtn">连接ws</button>
+<hr>
+<button id="breakBtn">断开</button>
 
-### 1. Send to client
-```
-ServicePath: Sender
-ServiceMethod: Send
-Args: {"type":"echo","client_id":["client_a"],"data":{"seq":1000}}
-Reply: {"code":200}
-```
+<script>
+  let linkBtn = document.getElementById('linkBtn');
+  let breakBtn = document.getElementById('breakBtn');
+  let ws;
+  let connected;
 
-### 2. Send to group
-```
-ServicePath: Sender
-ServiceMethod: GSend
-Args: {"type":"echo","group":["x-node"],"data":{"seq":1000}}
-Reply: {"code":200}
-```
+  linkBtn.addEventListener('click', function () {
+      if (connected){
+          return;
+      }
 
-### 3. Client join group
-```
-ServicePath: Client
-ServiceMethod: JoinGroup
-Args: {"client_id":"x-client","group":"x-node"}
-Reply: {"code":200}
-```
+      ws = new WebSocket('ws://192.168.110.20/api/ws');
 
-### 4. Client leave group
-```
-ServicePath: Client
-ServiceMethod: LeaveGroup
-Args: {"client_id":"x-client","group":"x-node"}
-Reply: {"code":200}
-```
+      //监听是否连接成功
+      ws.onopen = () => {
+          connected = true;
+          console.log('ws连接状态:' + ws.readyState);
+      };
 
-### 5. Client leave all group
-```
-ServicePath: Client
-ServiceMethod: LeaveAllGroup
-Args: {"client_id":"x-client"}
-Reply: {"code":200}
-```
+      // 接听服务器发回的信息并处理展示
+      ws.onmessage = (e) => {
+          console.log(e);
+      };
 
+      // 监听连接关闭事件
+      ws.onclose = function () {
+          connected = false;
+          // 监听整个过程中websocket的状态
+          console.log('ws连接状态：' + ws.readyState);
+      };
 
-### 6.  Broadcast
+      // 监听并处理error事件
+      ws.onerror = function (error) {
+          connected = false;
+          console.log(error);
+      };
+  });
+
+  breakBtn.addEventListener('click', function () {
+      if (ws) {
+          ws.close();
+      }
+  });
+</script>
+</body>
+
+</html>
 ```
-ServicePath: Client
-ServiceMethod: Broadcast
-Args: {"type":"echo","data":{"seq":1000}}
-Reply: {"code":200}
-```
-
-## Listener Docs
-
-* Creator `when a new client connected, trigger creator listener` 
- 
-* Destroyer `when cached client closed, trigger destroyer listener`
-
-## Code Styles
-```
-config                 -- App & Environment
-handler                -- Handler routers
-listener               -- Listeners
-manager                -- Client manager
-pkg                    -- Third-party pkg
-rpc                    -- Rpc service
-```
-
-## Environment
-
-### 1. SERVER_ADDR
-*Http Server Address*
-```
-default val: :80
-```
-
-### 2. RPC_ADDR
-*Rpc Server Address*
-```
-default val: :86
-```
-
-# Example
-
-```
-let ws = new WebSocket("ws://192.168.6.125:80/ws");
-let seq = 1;
-let INT;
-ws.onopen = function () {
-  console.log("已连接");
-  INT = setInterval(function () {
-    ws.send('{"type":"seq","data":{"seq":' + seq++ + "}}");
-  }, 1000);
-};
-ws.onmessage = function (msg) {
-  console.log("接收=>", msg.data);
-};
-ws.onclose = function () {
-  console.log("已断开");
-  clearInterval(INT);
-};
-```
-
-

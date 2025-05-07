@@ -1,4 +1,4 @@
-// Copyright 2023 wsserver Author. All Rights Reserved.
+// Copyright 2025 wsserver Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,180 +12,142 @@
 package manager
 
 import (
-	"errors"
 	"fmt"
-
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-the-way/wsserver/pkg/uuid"
-
-	"github.com/go-the-way/streams/ts"
-
-	ws "github.com/gorilla/websocket"
+	"github.com/go-the-way/wsserver/envs"
+	"github.com/go-the-way/wsserver/logger"
+	"github.com/go-the-way/wsserver/pkg"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
-// Client WS客户端
-type (
-	client struct {
-		mu   *sync.Mutex // mu: locker
-		conn *ws.Conn    // conn: WS connection
-		id   string      // id: WS ClientID
+type client struct {
+	mu, hmu *sync.Mutex
 
-		groups ts.Set[string] // groups: The group names
+	conn *websocket.Conn
 
-		connectedTime time.Time // connectedTime: WS connection connected time
+	reqHeader http.Header
 
-		closed     bool      // closed: WS connection closed?
-		closedTime time.Time // closedTime: WS connection closed time
+	id    string
+	group string
 
-		closeCh chan<- string
+	closed     bool
+	closeCh    chan<- string
+	readCh     chan map[string]any
+	stopReadCh chan struct{}
 
-		readCh     chan<- *ReadProto
-		stopReadCh chan struct{}
+	writeCh     chan any
+	stopWriteCh chan struct{}
 
-		writeCh     chan *WriteProto
-		stopWriteCh chan struct{}
+	stopHeartCh chan struct{}
 
-		heartMu     *sync.Mutex
-		stopHeartCh chan struct{}
+	ht *time.Ticker
 
-		ticker *time.Ticker
-	}
-	C = client
-)
+	connectedTime, closedTime time.Time
+}
 
-// newClient 新建客户端
-func newClient(conn *ws.Conn, group string, closeCh chan<- string, readCh chan<- *ReadProto) *client {
+func newClient(conn *websocket.Conn, clientId, group string, reqHeader http.Header, closeCh chan<- string) *client {
 	c := &client{
-		id:            uuid.RandID(),
 		mu:            &sync.Mutex{},
+		hmu:           &sync.Mutex{},
 		conn:          conn,
-		groups:        ts.NewSetValue[string](group),
-		connectedTime: time.Now(),
+		reqHeader:     reqHeader,
+		group:         group,
 		closeCh:       closeCh,
-		readCh:        readCh,
+		readCh:        make(chan map[string]any, 1),
 		stopReadCh:    make(chan struct{}, 1),
-		writeCh:       make(chan *WriteProto, 1),
+		writeCh:       make(chan any, 1),
 		stopWriteCh:   make(chan struct{}, 1),
-		heartMu:       &sync.Mutex{},
 		stopHeartCh:   make(chan struct{}, 1),
-		ticker:        time.NewTicker(time.Second * 10),
+		ht:            time.NewTicker(time.Second * 1),
+		connectedTime: time.Now(),
 	}
-	go c.read()
-	go c.write()
-	go c.heart()
-	return c
+	if c.isNode() {
+		c.id = clientId
+	} else {
+		if envs.Debug && clientId != "" {
+			c.id = clientId
+		} else {
+			c.id = pkg.Md5(uuid.NewString())
+		}
+	}
+	go c.startRead()
+	go c.startWrite()
+	go c.startHeart()
+	return c.onCreatedHandler()
 }
 
-// ID 客户端ID
-func (c *client) ID() string { return c.id }
-
-// RemoteAddrIP 远程地址IP
-func (c *client) RemoteAddrIP() string { return strings.Split(c.conn.RemoteAddr().String(), ":")[0] }
-
-// RemoteAddrPort 远程地址端口
-func (c *client) RemoteAddrPort() string { return strings.Split(c.conn.RemoteAddr().String(), ":")[1] }
-
-// Write 写
-func (c *client) Write(wp *WriteProto) { c.writeCh <- wp }
-
-// JoinGroup 客户端加入组
-func (c *client) JoinGroup(group string) (err error) {
-	if group == "" {
-		return errors.New("client: group name must be not empty")
+func (c *client) remoteAddrIP() string {
+	if xRealIp := c.reqHeader.Get("X-Real-Ip"); xRealIp != "" {
+		return xRealIp
 	}
-
-	if c.groups.Contains(group) {
-		return errors.New("client: group was joined")
-	}
-
-	c.groups.Add(group)
-
-	return nil
+	return strings.Split(c.conn.RemoteAddr().String(), ":")[0]
 }
 
-// LeaveGroup 客户端离开组
-func (c *client) LeaveGroup(group string) (err error) {
-	if group == "" {
-		return errors.New("client: group name must be not empty")
-	}
+func (c *client) write(data any) { c.writeCh <- data }
 
-	if !c.groups.Contains(group) {
-		return errors.New("client: group not joined")
-	}
+func (c *client) isNode() bool   { return c.inGroup("node") }
+func (c *client) isClient() bool { return !c.isNode() }
 
-	c.groups.Delete(group)
+func (c *client) inGroup(group string) bool { return c.group == group }
 
-	return
-}
-
-// LeaveGroups 客户端离开所有组
-func (c *client) LeaveGroups() { c.groups.Clear() }
-
-// InGroup 客户端是否在组
-func (c *client) InGroup(group string) bool { return c.groups.Contains(group) }
-
-// read 客户端读
-func (c *client) read() {
+func (c *client) startRead() {
 	for {
 		select {
 		case <-c.stopReadCh:
 			return
+		case data := <-c.readCh:
+			c.onReadHandler(data)
 		default:
-			rp := ReadProto{}
-			if err := c.conn.ReadJSON(&rp); err != nil {
+			mm := map[string]any{}
+			if err := c.conn.ReadJSON(&mm); err != nil {
+				c.debug("read json error: %v", err)
 				c.close()
 				return
-			} else {
-				rp.ClientID = c.ID()
-				c.readCh <- &rp
 			}
+			c.readCh <- mm
 		}
 	}
 }
 
-// write 客户端写
-func (c *client) write() {
+func (c *client) startWrite() {
 	for {
 		select {
 		case <-c.stopWriteCh:
 			return
-		case data, ok := <-c.writeCh:
-			if ok {
-				err := c.conn.WriteJSON(data)
-				if err != nil {
-					fmt.Println("client write", err)
-				}
-			} else {
-				return
+		case data := <-c.writeCh:
+			if err := c.conn.WriteJSON(data); err != nil {
+				c.debug("write json error: %v", err)
 			}
 		}
 	}
 }
 
-// heart 心跳
-func (c *client) heart() {
+func (c *client) startHeart() {
+	defer c.ht.Stop()
 	for {
 		select {
 		case <-c.stopHeartCh:
 			return
-		case <-c.ticker.C:
-			if try := c.heartMu.TryLock(); !try {
+		case <-c.ht.C:
+			if try := c.hmu.TryLock(); !try {
 				continue
 			}
-			if err := c.conn.WriteControl(ws.PingMessage, []byte{}, time.Now().Add(time.Second)); err != nil {
+			if err := c.conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(time.Second)); err != nil {
 				c.close()
-				c.heartMu.Unlock()
+				c.hmu.Unlock()
+				c.debug("write control message error: %v", err)
 				return
 			}
-			c.heartMu.Unlock()
+			c.hmu.Unlock()
 		}
 	}
 }
 
-// close 客户端关闭
 func (c *client) close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -197,6 +159,15 @@ func (c *client) close() {
 	_ = c.conn.Close()
 	c.stopWriteCh <- struct{}{}
 	c.stopHeartCh <- struct{}{}
+	c.ht.Stop()
 	c.closeCh <- c.id
-	c.ticker.Stop()
+	c.onClosedHandler()
+}
+
+func (c *client) debug(format string, v ...any) {
+	logger.Debug(fmt.Sprintf("client["+c.id+"]%s", format), v...)
+}
+
+func (c *client) log(format string, v ...any) {
+	logger.Log(fmt.Sprintf("client["+c.id+"]%s", format), v...)
 }

@@ -9,13 +9,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package app
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"github.com/go-the-way/wsserver/logger"
+
+	srv "github.com/smallnest/rpcx/server"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
+var server = srv.NewServer()
 
-func main() { serve(); select {} }
+func GetApp() *srv.Server { return server }
+
+func RegisterName(name string, rcvr any) {
+	GetApp().RegisterName(name, rcvr, "")
+	logger.Debug("rpc service[%s] registered", name)
+}

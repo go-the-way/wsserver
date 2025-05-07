@@ -9,13 +9,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package httpserver
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"fmt"
+	"os"
+
+	"github.com/go-the-way/svc"
+	"github.com/go-the-way/wsserver/envs"
+
+	_ "github.com/go-the-way/wsserver/server/httpserver/router"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
-
-func main() { serve(); select {} }
+func Serve() { fmt.Println(svc.GetApp().Run(envs.ServerAddr)); os.Exit(0) }

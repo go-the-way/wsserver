@@ -9,13 +9,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package rpcserver
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"github.com/go-the-way/wsserver/envs"
+	"github.com/go-the-way/wsserver/logger"
+	"github.com/go-the-way/wsserver/server/rpcserver/app"
+	"os"
+
+	_ "github.com/go-the-way/wsserver/server/rpcserver/services"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
-
-func main() { serve(); select {} }
+func Serve() {
+	logger.Log("rpc server served on %s", envs.RpcAddr)
+	logger.Log("rpc server serve error: %v", app.GetApp().Serve("tcp", envs.RpcAddr))
+	os.Exit(0)
+}

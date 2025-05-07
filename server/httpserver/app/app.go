@@ -9,13 +9,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package app
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"github.com/gin-gonic/gin"
+	"github.com/go-the-way/svc"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
+var _app = svc.GetApp(gin.Recovery(), svc.Cors())
 
-func main() { serve(); select {} }
+func GetApp() *gin.Engine { return _app }
+
+func GetAppWithGroup(prefix string) gin.IRoutes { return GetApp().Group(prefix) }

@@ -9,13 +9,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package envs
 
-import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
-)
+import "os"
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
-
-func main() { serve(); select {} }
+func bindEnv(name, defVal string) (bindVal string) {
+	bindVal = defVal
+	if val := os.Getenv(name); val != "" {
+		bindVal = val
+	}
+	return
+}

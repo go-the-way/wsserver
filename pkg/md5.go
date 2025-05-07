@@ -9,13 +9,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package pkg
 
 import (
-	"github.com/go-the-way/wsserver/server/httpserver"
-	"github.com/go-the-way/wsserver/server/rpcserver"
+	"crypto/md5"
+	"encoding/hex"
 )
 
-func serve() { go rpcserver.Serve(); go httpserver.Serve() }
-
-func main() { serve(); select {} }
+func Md5(str string) string {
+	hash := md5.New()
+	_, _ = hash.Write([]byte(str))
+	s := hash.Sum(nil)
+	return hex.EncodeToString(s)
+}
